@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"fmt"
 	"go_purple/configs"
+	"go_purple/pkg/jwt"
 	"go_purple/pkg/req"
 	"go_purple/pkg/response"
 	"net/http"
@@ -35,9 +35,20 @@ func (handler *AuthHandler) Login() http.HandlerFunc {
 			return
 		}
 		email, err := handler.AuthService.Login(body.Email, body.Password)
-		fmt.Println(email, err)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		token, err := jwt.NewJWT(handler.Auth.Secret).Create(email)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		data := LoginResponse{
-			Token: "123",
+			Token: token,
 		}
 		response.Json(w, data, http.StatusOK)
 	}
@@ -51,11 +62,21 @@ func (handler *AuthHandler) Register() http.HandlerFunc {
 			return
 		}
 
-		resp, err := handler.AuthService.Register(body.Email, body.Password, body.Name)
+		email, err := handler.AuthService.Register(body.Email, body.Password, body.Name)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
-		response.Json(w, resp, http.StatusCreated)
+		token, err := jwt.NewJWT(handler.Auth.Secret).Create(email)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		data := RegisterResponse{
+			Token: token,
+		}
+		response.Json(w, data, http.StatusOK)
 	}
 }
