@@ -2,6 +2,7 @@ package main
 
 import (
 	"go_purple/internal/link"
+	"go_purple/internal/stat"
 	"go_purple/internal/user"
 	"os"
 
@@ -16,10 +17,12 @@ func main() {
 		panic(err)
 	}
 
-	db, err := gorm.Open(postgres.Open(os.Getenv("DSN")), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(os.Getenv("DSN")), &gorm.Config{
+		DisableForeignKeyConstraintWhenMigrating: true,
+	})
 	if err != nil {
 		panic(err)
 	}
 
-	db.AutoMigrate(&link.Link{}, &user.User{})
+	db.AutoMigrate(&link.Link{}, &user.User{}, &stat.Stat{})
 }
