@@ -3,6 +3,7 @@ package link
 import (
 	"fmt"
 	"go_purple/configs"
+	"go_purple/internal/stat"
 	"go_purple/pkg/middleware"
 	"go_purple/pkg/req"
 	"go_purple/pkg/response"
@@ -14,11 +15,26 @@ import (
 
 type LinkHandlerDeps struct {
 	LinkRepository *LinkRepository
+	StatRepositoty *stat.StatRepository
 	Config         *configs.Config
 }
 
 type LinkHandler struct {
 	LinkRepository *LinkRepository
+	StatRepository *stat.StatRepository
+}
+
+func NewLinkHandler(router *http.ServeMux, deps LinkHandlerDeps) {
+	handler := &LinkHandler{
+		LinkRepository: deps.LinkRepository,
+		StatRepository: deps.StatRepositoty,
+	}
+
+	router.HandleFunc("POST /link", handler.Create())
+	router.Handle("PATCH /link/{id}", middleware.IsAuth(handler.Update(), deps.Config))
+	router.HandleFunc("DELETE /link/{id}", handler.Delete())
+	router.HandleFunc("GET /{hash}", handler.GoTo())
+	router.Handle("GET /link", middleware.IsAuth(handler.GetAll(), deps.Config))
 }
 
 func (handler *LinkHandler) Create() http.HandlerFunc {
@@ -29,8 +45,6 @@ func (handler *LinkHandler) Create() http.HandlerFunc {
 		}
 
 		link := NewLink(body.Url)
-
-		fmt.Println(body)
 
 		createdLink, err := handler.LinkRepository.Create(link)
 		if err != nil {
@@ -52,6 +66,7 @@ func (handler *LinkHandler) GoTo() http.HandlerFunc {
 			return
 		}
 
+		handler.StatRepository.AddClick(link.ID)
 		http.Redirect(w, r, link.Url, http.StatusTemporaryRedirect)
 
 	}
@@ -138,16 +153,4 @@ func (handler *LinkHandler) Delete() http.HandlerFunc {
 
 		response.Json(w, nil, http.StatusOK)
 	}
-}
-
-func NewLinkHandler(router *http.ServeMux, deps LinkHandlerDeps) {
-	handler := &LinkHandler{
-		LinkRepository: deps.LinkRepository,
-	}
-
-	router.HandleFunc("POST /link", handler.Create())
-	router.Handle("PATCH /link/{id}", middleware.IsAuth(handler.Update(), deps.Config))
-	router.HandleFunc("DELETE /link/{id}", handler.Delete())
-	router.HandleFunc("GET /{hash}", handler.GoTo())
-	router.Handle("GET /link", middleware.IsAuth(handler.GetAll(), deps.Config))
 }
