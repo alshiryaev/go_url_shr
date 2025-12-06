@@ -66,7 +66,7 @@ func (handler *LinkHandler) GoTo() http.HandlerFunc {
 			return
 		}
 
-		handler.EventBus.Publish(event.Event{
+		go handler.EventBus.Publish(event.Event{
 			Type: event.EventLinkVisited,
 			Data: link.ID,
 		})

@@ -5,6 +5,7 @@ import (
 	"go_purple/configs"
 	"go_purple/internal/auth"
 	"go_purple/internal/link"
+	"go_purple/internal/stat"
 	"go_purple/internal/user"
 	"go_purple/pkg/db"
 	"go_purple/pkg/event"
@@ -21,12 +22,16 @@ func main() {
 	// Repositories
 	linkReposotory := link.NewLinkRepository(db)
 	userRepository := user.NewUserRepository(db)
-	// statRepositoty := stat.NewStatRepository(db)
+	statRepositoty := stat.NewStatRepository(db)
 
 	eventBus := event.NewEventBus()
 
 	// Services
 	authService := auth.NewAuthService(userRepository)
+	statService := stat.NewStatService(stat.StatServiceDeps{
+		StatRepository: statRepositoty,
+		EventBus:       eventBus,
+	})
 
 	// Handler
 	auth.NewAuthHandler(router, auth.AuthHanderDeps{
@@ -49,6 +54,8 @@ func main() {
 		Addr:    ":8081",
 		Handler: stack(router),
 	}
+
+	go statService.AddClick()
 
 	fmt.Println("Server is listening on port 8081")
 	server.ListenAndServe()
