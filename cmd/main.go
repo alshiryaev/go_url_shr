@@ -5,9 +5,9 @@ import (
 	"go_purple/configs"
 	"go_purple/internal/auth"
 	"go_purple/internal/link"
-	"go_purple/internal/stat"
 	"go_purple/internal/user"
 	"go_purple/pkg/db"
+	"go_purple/pkg/event"
 	"go_purple/pkg/middleware"
 	"net/http"
 )
@@ -21,7 +21,9 @@ func main() {
 	// Repositories
 	linkReposotory := link.NewLinkRepository(db)
 	userRepository := user.NewUserRepository(db)
-	statRepositoty := stat.NewStatRepository(db)
+	// statRepositoty := stat.NewStatRepository(db)
+
+	eventBus := event.NewEventBus()
 
 	// Services
 	authService := auth.NewAuthService(userRepository)
@@ -33,7 +35,7 @@ func main() {
 	})
 	link.NewLinkHandler(router, link.LinkHandlerDeps{
 		LinkRepository: linkReposotory,
-		StatRepositoty: statRepositoty,
+		EventBus:       eventBus,
 		Config:         conf,
 	})
 

@@ -3,7 +3,7 @@ package link
 import (
 	"fmt"
 	"go_purple/configs"
-	"go_purple/internal/stat"
+	"go_purple/pkg/event"
 	"go_purple/pkg/middleware"
 	"go_purple/pkg/req"
 	"go_purple/pkg/response"
@@ -15,19 +15,19 @@ import (
 
 type LinkHandlerDeps struct {
 	LinkRepository *LinkRepository
-	StatRepositoty *stat.StatRepository
 	Config         *configs.Config
+	EventBus       *event.EventBus
 }
 
 type LinkHandler struct {
 	LinkRepository *LinkRepository
-	StatRepository *stat.StatRepository
+	EventBus       *event.EventBus
 }
 
 func NewLinkHandler(router *http.ServeMux, deps LinkHandlerDeps) {
 	handler := &LinkHandler{
 		LinkRepository: deps.LinkRepository,
-		StatRepository: deps.StatRepositoty,
+		EventBus:       deps.EventBus,
 	}
 
 	router.HandleFunc("POST /link", handler.Create())
@@ -66,7 +66,10 @@ func (handler *LinkHandler) GoTo() http.HandlerFunc {
 			return
 		}
 
-		handler.StatRepository.AddClick(link.ID)
+		handler.EventBus.Publish(event.Event{
+			Type: event.EventLinkVisited,
+			Data: link.ID,
+		})
 		http.Redirect(w, r, link.Url, http.StatusTemporaryRedirect)
 
 	}
